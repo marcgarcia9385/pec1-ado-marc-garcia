@@ -1,0 +1,956 @@
+---
+title: "MA-analysis"
+author: "Marc Garcia"
+date: "20/3/2020"
+output:
+  html_document:
+    theme: united
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+header-includes:
+  - \usepackage{booktabs}
+---
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(root.dir = "C:/Users/USER/Documents/Màster Bioestadística i Bioinfo/Análisis de datos Ómicos/Microarrays Analysis")
+
+```
+
+* * *
+
+<div align = "justify">
+
+### Abstract
+
+<br>
+
+Microarray data analysis has been one of the most important hits in the interaction between statistics and bioinformatics in the last two decades. The analysis of microarray data can be done in different ways using different tools. In this chapter a typical workflow for analyzing microarray data using `R` and `Bioconductor` packages is presented. The workflow starts with the raw data -binary files obtained from the hybridization process- and goes through a series of steps: Reading raw data, Quality Check, Normalization, Filtering, Selection of differentially expressed genes, Comparison of selected lists and Analysis of Biological Significance. The implementation of each step in R is described through a use case that goes from raw data until the analysis of biological significance. Data and code for the analysis are provided in a github repository.
+
+<br>
+
+### Introduction
+
+<br>
+
+Microarray data analysis is one of the clearest cases where interaction between bioinformatics and statistics has been highly beneficial for both disciplines. Efron Efron (2013) even calls the 21st century as the century of microarrays. What is generically described as **microarray data analysis** is a process that starts with the design of the experiment intended to answer with one or more biological questions and ends with a tentative answer for these questions. Statistics is involved at every step of this process, for preparing, transforming visualizing or analyzing data. And, of course, every step can be done in different way that use either classical statistics or new methods developed ad-hoc for these often high dimensional problems. The detailed description of these steps is out of the scope of this chapter and the reader is assumed to be familiar with them. It is assumed that the reader is already familiar with microarrays such as they are introduced in Sánchez-Pla (2014) and also with the general ideas of microarray data analysis such as can be found in Draghici (2012). In any case, for the sake of completeness basic ideas will be briefly introduced and citations provided for the first time they are discussed.
+
+<br>
+
+For our objectives we can assume that a microarray dataset is a matrix of continuous values that represent the expressions of a set of genes (one gene per row), in a variety of conditions or samples (one sample per column). See figure 1 for an example.
+
+<br>
+
+```{r figure 1, comment=NA, fig.cap="**Figure 1:** a simplified view of a gene expression matrix", out.width="1000px", echo=F}
+
+knitr::include_graphics("others/gene-expression-matrix.png")
+
+```
+
+<br>
+
+Note that we have described the row contents as **genes**. Strictly speaking depending on the type of array, each row may correspond to one distinct, but related, entity: a **probeset** or a **transcript**.
+
+<br>
+
++ A **transcript** describes how the gene has been transcribed into messenger RNA. If transcription was unique there would be a single transcript per gene. However, due to the phenomenon of alternative splicing, Sánchez-Pla et al. (2012), there may be different transcriptions of the same gene (the associated proteins are called **isoforms**). That there may be multiple transcripts per gene.
+
+<br>
+
++ A **probeset** is, as indicated by its name, a set of “probes”, which are designed to map different fragments of a given gene. Altogether it is expected that each set of probes, or probeset, uniquely characterizes one gene. However, given that this characterization is not always possible it may be convenient to have more than one probeset per gene. That is although it is common to exchange the terms “probeset” and “gene”, it is important to be aware that there may be several probestes per each gene.
+
+<br>
+
+In practice, we don't have to worry too much about this and, given that either probesets or transcripts map to genes, it is common to describe the array rows as genes.
+
+<br>
+
+Our main goal is to describe a workflow, a series of ordered steps that takes us from the raw data, the digitized images as produced by the hybridization system, to one or more lists of genes that can be used to help answering a certain biological question. This can be done in distinct ways. What we present here is an approach that has become very popular along the last decades based on analyzing the data from the images to the lists of genes, using the R Statistical language and some of the packages developed specifically for this in the Bioconductor project. A summary of the process can be found in figure 2.
+
+<br>
+
+```{r figure 2, comment=NA, fig.cap="**Figure 2:** the microarray data analysis process", out.width="750px", echo=F}
+
+knitr::include_graphics("others/microarray-data-analysis-process.png")
+
+```
+
+<br>
+
+### Materials
+
+<br>
+
+In this section we list all the materials needed to perform a microarray data analysis. The document is adapted from Gonzalo Sanz and Sánchez-Pla (2019), by the same authors.
+
+<br>
+
+#### Software
+
+<br>
+
+First of all it is needed to install the software to perform all the required calculations. There are many available options (Mehta and Rani, 2011) but one of the most common approaches is to use the `R statistical software`. R can be downloaded from its [web page](https://cran.r-project.org/index.html) and installed following the instructions described there. The microarray analysis presented in this chapter has been performed with the latest version of R which, at the moment of writing, was 3.6.2.
+
+<br>
+
+R is a console based software. Its use can be facilitated with an additional interface called `R-Studio`. It can be downloaded and installed following the instructions listed in its [web page](https://www.rstudio.com/). Although its use is not compulsory for reproducing the analyses in this chapter it is highly recommended to work with R using this interface.
+
+<br>
+
+When working with R it is often required to use some functions not available in the basic installation. This can be done by installing additional libraries, also called **packages**, developed by the scientific community. Most packages used for the analysis of high throughput genomic data are part of the [Bioconductor](https://www.bioconductor.org/) project which started with a few packages in 2002 and has now more than one thousand. Indeed `Bioconductor` has become the state-of-the-art way to analyze microarray and other omics data and it has grown from hardly a dozen packages in 2002 to the current number of more than one thousand. The analysis presented have been performed using Bioconductor version 3.10.
+
+<br>
+
+R and Bioconductor are open source free software. This has many advantages but it may sometimes be a problem, especially when new functionalities are not compatible with previous versions.
+
+<br>
+
+#### Data
+
+<br>
+
+This protocol is applied on a dataset from a published study [Li et al. (2017)](https://www.pnas.org/content/114/34/E7111). The data had been uploaded into the `Gene Expression Omnibus (GEO)` database, an international public repository that archives and freely distributes high-throughput gene expression and other functional genomics data sets (Clough and Barrett, 2016). The dataset selected is identified with the accession number: `GSE100924`.
+
+<br>
+
+This study investigated the function of gene [ZBTB7B](http://www.genecards.org/cgi-bin/carddisp.pl?gene=ZBTB7B), which activates the thermogenic gene program during brown and beige adipocyte differentiation, regulating brown fat gene expression at ambient room temperature and following cold exposure. As shown in figure 3, the experiment compared 10 weeks old mice with the gene deactivated (**KO** or **knockout**) or not (**WT** or **Wild type**) at two different temperatures, ambient room temperature (**RT**, 22ºC) or following cold exposure (**COLD**, 4ºC) for 4 hours. That is, it was a 2×2 factorial design (genotype and temperature) with two levels each (wild type and knock out, for genotype, and room temperature and cold, for temperature). The sample size of the experiment was 12 samples, three replicates of each group. The microarrays used for this experiment were of type *Mouse Gene 2.1 from Affymetrix*, now Thermofisher, one of the most popular vendors of microarray technology.
+
+<br>
+
+```{r figure 3, comment=NA, fig.cap="**Figure 3:** experimental design of the study", echo=F, out.width="1200px"}
+
+knitr::include_graphics("others/experimental design.png")
+
+```
+
+
+<br>
+
+### Methods
+
+<br>
+
+#### Environment preparation:
+
+<br>
+
+In a microarray data analysis project, data analyst will have to manage a lot of files, including the files with the raw data (`.CEL files`) and the files generated during the analysis of them. For this reason, it is very advisable to define some folders before beginning with the analysis to try to not get lost, if all the files go to the same folder. We strongly recommend that user creates the following folders:
+
+<br>
+
++ A main folder that will be the **working directory** called for example `MicroarraysAnalysis`.
++ A folder called, for example `data` located within the working directory. Here we will save all the .CEL files and the targets file with information on the covariates, described in next section.
++ A folder called, for example `results` located within the working directory. Here we will send all the results obtained in the microarray analysis.
+
+<br>
+
+The following commands create the desired folders. This can be made from within R as described, or using a visual file browser such as Windows File Explorer or any other (in that case you can omit this step).
+
+<br>
+
+```{r defining working directory & directory structure, comment=NA, eval=F}
+
+dir.create(path = "data/")
+dir.create(path = "results/")
+
+```
+
+<br
+
+The code for running this analysis, that can be easily adapted to run similar studies, can be downloaded from a github repository specifically devoted to this chapter. In the following sections it is assumed that such code has been downloaded and copied into the working directory. This is the [url](https://github.com/alexsanchezpla/StatisticalAnalysisOfMicroarrayData) for the repository. Once it is saved, open `R-Studio`, open the file with the `R` code, and in `R-Studio` go to the menu option in the top *Session -> Set working directory -> To source file location*. This action will set the folder we have set as **main** folder as our working directory.
+
+<br>
+
+#### Prepare the data for the analysis
+
+<br>
+
+The data for the analysis will be provided as two types of files, the `.CEL` files and the `targets` file. `CEL` files are the files with the **raw data** originated after microarray scanning and preprocessing with Affymetrix software. This files need to be saved into the data folder. Usually one expectes to have a .CEL file for each sample in the experiment.
+
+<br>
+
+Another file needed for the analysis is the `targets` file, which contains the information on groups and covariates. That is, this file relates the name of each `.CEL` file with their condition in the experiment. We can use the targets to retain all the information valuable for the analysis like other covariables. Although the targets file need not have any fixed names it is practical to use its column names to create labels that will be used later. For example:
+
+<br>
+
++ Column called FileName: It may contain the exact name of the `CEL` files in the data folder
++ Column called Group: It may summarize the conditions in the experiment for that sample.
++ Column called ShortName: It may be used to store a short label of the sample useful for some plots.
++ There may be other columns to store covariables in the study such as sex, age, etc.
+
+<br>
+
+For this analysis, targets file has been saved in `.csv` format, separated by semicolon, although any other format that works for delimited text files might have been used. Table 1 shows the contents of the targets file used in this analysis.
+
+<br>
+
+```{r targets file content, comment=NA, fig.cap="Table 1: content of the targets file used for the current analysis"}
+
+targets <- read.csv(file = "data/targets.csv", 
+                    header = T, 
+                    sep = ";")
+
+knitr::kable(x = targets, booktabs = T)
+
+```
+
+<br>
+
+#### Packages installation in R
+
+<br>
+
+Packages not available in the basic `R` installation need to be installed before the analysis can be done. As commented in Materials section, these packages may be downloaded from distinct repositories. The most common ones will be `CRAN` for standard packages or `Bioconductor` for `Bioconductor` packages. Standard `R` packages can be downloaded and installed from default repositories with the `install.packages()` function. `Bioconductor` packages can be downloaded and installed with the function `install()` from the `BiocManager` package. The code below will download and install the packages needed for the analysis. Note that **this code must be executed only once**. Subsequent executions of the analysis do not need to re-install the packages. The first chunk makes a fresh install of basic bioconductor packages. 
+
+<br>
+
+```{r installation 1, comment=NA, eval=F, warning=F, message=F}
+
+if (!requireNamespace("BiocManager", quietly = TRUE)){
+  install.packages("BiocManager")
+}
+
+```
+
+<br>
+
+The second chunk installs packages specifically needed for this study. Some packages may require compilation, so a good idea if you are not working on a Linux machine, is to have `Rtools` installed. This can be downladed from [here](https://cran.r-project.org/bin/windows/Rtools/).
+
+<br>
+
+```{r installation 2, eval=F, comment=NA, warning=F, message=F}
+
+# From CRAN
+
+install.packages("knitr", dependencies = T)
+install.packages("colorspace", dependencies = T)
+install.packages("gplots", dependencies = T)
+install.packages("ggplot2", dependencies = T)
+install.packages("ggrepel", dependencies = T)
+install.packages("htmlTable", dependencies = T)
+install.packages("prettydoc", dependencies = T)
+install.packages("devtools", dependencies = T)
+install.packages("BiocManager", dependencies = T)
+
+# From Bioconductor
+
+BiocManager::install("oligo") # Y
+BiocManager::install("pd.mogene.2.1.st") # Y
+BiocManager::install("arrayQualityMetrics") # Y
+BiocManager::install("pvca") # Y
+BiocManager::install("limma") # Y
+BiocManager::install("genefilter") # Y
+BiocManager::install("mogene21sttranscriptcluster.db") # Y
+BiocManager::install("annotate") # Y
+BiocManager::install("org.Mm.eg.db") # Y
+BiocManager::install("ReactomePA") 
+BiocManager::install("reactome.db")
+
+```
+
+<br>
+
+#### Read the CEL files
+
+<br>
+
+Next step is to read the raw data (`CEL` files) and to store it in a variable (in this case we have called it `raw_data`). First we have to load the package `oligo` with the function `library()`. In this package are coded the functions to read the `CEL` files. Take attention to put the correct folder where the `CEL` files are saved when executing `list.celfiles` function.
+
+<br>
+
+```{r reading the CEL files, comment=NA, message=F, warning=F}
+
+# Loading oligo package
+
+library(Biobase)
+library(oligo)
+
+# Loading data into an ExpressionSet
+
+data_dir <- file.path("data")
+
+cel_files <- list.celfiles(data_dir, 
+                           full.names = T)
+
+targets_file <- read.AnnotatedDataFrame(path = "data/", 
+                                        filename = "targets.csv",
+                                        header = T, 
+                                        row.names = 1, 
+                                        sep = ";")
+
+(raw_data <- read.celfiles(cel_files, 
+                           phenoData = targets_file))
+
+```
+
+<br>
+
+Note that we have read another time the targets file, but now using another specific function: `read.AnnotatedDataFrame()`, and stored in a new variable called **my_targets**. We have done that to associate the information stored in the `CEL` files with the targets file in on single variable with the last code’s line. This object is called **ExpressionSet** and is designed to combine several different sources of information into a single convenient structure. We could store in this object all the information available about the experiment performed (protocol used, experiment data, microarray type…). To get familiar with this type of object we'll conduct an exploration and, moreover, we'll change the long name of the samples, for the short and more comprehensive label previously coded in ShortName column of the targets.
+
+<br>
+
+```{r changing samples names, comment=NA}
+
+# Exploration of rawData
+
+exprs_raw_data <- exprs(raw_data)                   # Expression matrix (raw_data)
+exprs_raw_data <- raw_data@assayData$exprs
+
+pheno_data <- pData(raw_data)                       # Phenotypic data (raw data)
+pheno_data <- raw_data@phenoData@data
+
+head(exprs_raw_data[ , 1:5], 10)                    # Primeros 5 arrays, primeros 10 genes/probesets
+pheno_data                                          # Datos fenotípicos
+head(featureNames(raw_data))                        # Feature names (gene/probeset/transcrit names)
+head(varLabels(raw_data))                           # Covariate names
+head(sampleNames(raw_data))                         # Sample names
+
+# Changing sample's names
+
+rownames(raw_data@phenoData@data) <- pheno_data$ShortName
+sampleNames(raw_data) <- pheno_data$ShortName
+head(exprs(raw_data), 10)
+
+```
+
+<br>
+
+### Quality control of raw data
+
+<br>
+
+Once the raw data is loaded it is the moment to check if the data have enough quality for normalization. This step is very important since bad quality data could introduce a lot of noise in the analysis, that normalization process could not solve. `ArrayQualityMetrics` package performs different quality approaches, like **boxplot of the intensity of the data** and **Principal Component Analysis (PCA)** among others. If one array is above a certain threshold defined in the function it is marked with an asterisk as an outlier. When a certain array is marked three times it should be revised carefully, perhaps this sample will have to be rejected to improve the overall quality of the experiment. First step is to load the package to gain access to the function. Be careful again to specify correctly the destination folder of the results.
+
+<br>
+
+```{r 1st quality control, message=F, warning=F, eval=F}
+
+# Loading arrayQualityMetrics package
+
+library(arrayQualityMetrics)
+
+# Quality control of raw data 
+
+arrayQualityMetrics(expressionset = raw_data, 
+                    outdir = file.path("results/", "QCDir.Raw"), 
+                    force = T, 
+                    intgroup = c("Group"))
+
+```
+
+<br>
+
+We have to check the results of the quality analysis in a recently created directory (`QCDir.Raw`). Inside this folder we have to look for a file called `index.html`, which opens a web page from where we will be able to access a summary of the analysis performed. The image in *Figure 4* shows the header of this file which contains a table with three columns indicating some quality criteria that should be verified by **good quality** arrays. In this example three samples have been marked once. Usually if there is only one mark it means that potential problems are small so we can decide to keep all the arrays in the analyis.
+
+<br>
+
+```{r figure 4, comment=NA, fig.cap="**Figure 4:** Aspect of the summary table, in the index.html file, produced by the arrayQualityMetrics package on the raw data", echo=F, out.width="700px"}
+
+knitr::include_graphics("others/figure 3.png")
+
+```
+
+<br>
+
+A more comprehensive principal component analysis can be obtained using a function specifically designed for that. The code for this function is shown in the next chunk.
+
+<br>
+
+```{r PCA complementary analysis 1, comment=NA}
+
+# Loading packages
+
+library(ggplot2)
+library(ggrepel)
+
+# Constructing the function
+
+plotPCA3 <- function (datos, labels, factor, title, scale, colores, size = 1.5, glineas = 0.25) {
+  data <- prcomp(t(datos), scale = scale)
+  
+  # plot adjustments
+  
+  dataDf <- data.frame(data$x)
+  Group <- factor
+  loads <- round(data$sdev^2/sum(data$sdev^2) * 100, 1)
+  
+  # main plot
+  
+  p1 <- ggplot(data = dataDf, aes(x = PC1, y = PC2)) +
+    theme_classic() +
+    geom_hline(yintercept = 0, color = "gray70") +
+    geom_vline(xintercept = 0, color = "gray70") +
+    geom_point(aes(color = Group), alpha = 0.55, size = 2) +
+    coord_cartesian(xlim = c(min(data$x[ , 1]) - 5, max(data$x[ , 1]) + 5)) +
+    scale_fill_discrete(name = "Group")
+  
+  # avoiding labels superposition
+  
+  p1 + geom_text_repel(aes(y = PC2 + 0.25, label = labels), segment.size = 0.25, size = size) + 
+    labs(x = c(paste("PC1", loads[1], "%")), y = c(paste("PC2", loads[2], "%"))) +  
+    ggtitle(paste("Principal Component Analysis for: ", title, sep = " ")) + 
+    theme(plot.title = element_text(hjust = 0.5)) +
+    scale_color_manual(values = colores)
+}
+
+```
+
+<br>
+
+```{r PCA complementary analysis 2, comment=NA, fig.cap="**Figure 5:** Visualization of the two first Principal Components for raw data"}
+
+# PCA plot from raw data
+
+plotPCA3(datos = exprs(raw_data), 
+         labels = targets_file$ShortName, 
+         factor = targets_file$Group, 
+         title = "Raw data", 
+         scale = F, 
+         size = 2.5, 
+         colores = c("red", "blue", "green", "yellow"))
+
+```
+
+<br>
+
+Note that we have defined in the function some parameters to facilitate the visualization:
+
+<br>
+
++ The **label of the samples**, remember that it is coded in the ShortName column of the targets.
++ The **characteristic** to color the samples, coded in the Group column in targets.
++ The **colors** of each group.
+
+<br>
+
+If necessary, it is easy to save the plots to a tiff file with the following code:
+
+<br>
+
+```{r saving PCA plot, comment=NA}
+
+# Saving PCA plot 
+
+tiff("figures/PCA_RawData.tiff", 
+     res = 200, 
+     width = 5.5, 
+     height = 4.5, 
+     units = 'in')
+
+plotPCA3(datos = exprs(raw_data), 
+         labels = targets_file$ShortName, 
+         factor = targets_file$Group, 
+         title = "Raw data", 
+         scale = F, 
+         size = 1.5, 
+         colores = c("red", "blue", "green", "yellow"))
+
+dev.off()
+
+```
+
+<br>
+
+First component of the PCA accounts for 55.9% of the total variability of the samples, and as we can observe in the plot, this variability is mainly contributed by the temperature condition since samples incubated to 4 degrees are on the right and samples incubated at room temperature are on the left.
+
+<br>
+
+In the same way, we can easily visualize the intensity distribution of the arrays using boxplots. Figure 4 shows a multiple boxplot depicting the distribution of the intensities along all samples.
+
+<br>
+
+```{r intensity boxplot (raw data), comment=NA, fig.cap="**Figure 6:** Boxplot for arrays intensities (Raw Data)"}
+
+# Boxplot of raw data
+
+boxplot(x = raw_data, 
+        cex.axis = 0.5, 
+        las = 2, 
+        which = "all", 
+        col = c(rep("seagreen4", 3), 
+                rep("saddlebrown", 3), 
+                rep("sienna3", 3), 
+                rep("slateblue3", 3)),
+        main = "Distribution of raw intensity values", 
+        ylab = "Intensity")
+
+```
+
+<br>
+
+```{r intensity boxplot 2 (rawdata), comment=NA}
+
+# Saving boxplot
+
+tiff(filename = "figures/Intensity_RawData.tiff", 
+     width = 5.5, 
+     height = 4.5, 
+     res = 200, 
+     units = "in")
+
+boxplot(x = raw_data, 
+        cex.axis = 0.5, 
+        las = 2, 
+        which = "all", 
+        col = c(rep("seagreen4", 3), 
+                rep("saddlebrown", 3), 
+                rep("sienna3", 3), 
+                rep("slateblue3", 3)),
+        main = "Distribution of raw intensity values", 
+        ylab = "Intensity")
+
+dev.off()
+
+```
+
+<br>
+
+A light variation of intensity among arrays is observed, but this is the expected for raw data.
+
+<br>
+
+### Data Normalization
+
+<br>
+
+Before beginning with differential expression analysis, it is necessary to make the arrays comparable among them and try to reduce, and if it's possible eliminate, all the variability in the samples not owing to biological reasons. Normalization process tries to assure that intensity differences present in the arrays, reflect the differential expression of the genes rather than artificial biases due to technical issues. Normalization consists of three discrete steps:
+
+<br>
+
++ Background correction
++ Normalization
++ Summarization
+
+<br>
+
+Most commonly used for normalization is **Robust Multichip Analysis** ([Irizarry et al, 2003](https://academic.oup.com/biostatistics/article/4/2/249/245074)). On this direction we can use the function `rma()` from the `oligo` package.
+
+<br>
+
+```{r data normalization, comment=NA}
+
+# Data normalization
+
+norm_data <- rma(raw_data)
+
+# Expression matrix from normalized data
+
+exprs_norm_data <- exprs(norm_data)
+
+print(head(exprs_norm_data, 10), 
+      digits = 2)
+
+# Phenotypic data
+
+pheno_data_2 <- pData(norm_data)
+print(pheno_data_2)
+
+```
+
+<br>
+
+### Quality control of normalized data
+
+<br>
+
+After performing normalization it is interesting to perform a second quality control to check how data looks. As before, for this purpose we'll use again the function `arrayQualityMetrics`.
+
+<br>
+
+```{r quality control 2.1 (norm data), comment=NA, eval=F}
+
+# Quality control (normalized data)
+
+arrayQualityMetrics(expressionset = norm_data, 
+                    outdir = file.path("results/", "QCDir.Norm"), 
+                    force = T, 
+                    intgroup = c("Group"))
+
+```
+
+<br>
+
+```{r figure 7, comment=NA, fig.cap="**Figure 7:** Aspect of the summary table, in the index.html file, produced by the arrayQualityMetrics package on the normalized data", echo=F, out.width="700px"}
+
+knitr::include_graphics("others/figure 5.png")
+
+```
+
+<br>
+
+```{r quality control 2.2 (norm data), comment=NA, fig.cap="**Figure 8:** Visualization of the two first Principal Components for normalized data"}
+
+# PCA Analysis
+
+plotPCA3(datos = exprs(norm_data), 
+         labels = pheno_data$ShortName, 
+         factor = pheno_data$Group, 
+         title="Normalized data", 
+         scale = FALSE, 
+         size = 3, 
+         colores = c("red", "blue", "green", "yellow"))
+
+```
+
+<br>
+
+```{r quality control 2.3 (norm data), comment=NA}
+
+# Saving PCA plot
+
+tiff("figures/PCA_NormData.tiff", 
+     res = 200, 
+     width = 5.5, 
+     height = 4.5, 
+     units = 'in')
+
+plotPCA3(datos = exprs(norm_data), 
+         labels = pheno_data$ShortName, 
+         factor = pheno_data$Group, 
+         title="Normalized data", 
+         scale = FALSE, 
+         size = 1.5, 
+         colores = c("red", "blue", "green", "yellow"))
+
+dev.off()
+
+```
+
+<br>
+
+Now first component accounts for 33% of the total variability. Notice that the percentage of explained variability has decreased with respect to PCA performed on raw data (from 55.9 to 33). Similarly as with the PCA with raw data, it separates samples from COLD level of temperature condition on the right, and samples from RT level on the left. It is important to note that there are one sample from group KO.RT that groups near WT.RT and viceversa. It could be an issue of mislabeling of samples that should be checked with the laboratory that has processed the samples.
+
+<br>
+
+Figure 9 shows a multiple boxplot depicting the distribution of the normalized intensities along all samples. Notice that all boxplots have the same aspect. This suggests that the normalization has worked fine. However it is important to be aware that RMA includes a step (**quantile normalization**) where the empirical distribution of all the samples is set to the same values. As a consequence, **it is expected that the boxplots are identical or at least very similar**.
+
+<br>
+
+```{r quality control 2.4 (norm data), comment=NA, fig.cap="**Figure 9:** Boxplot for arrays intensities (Normalized data)", message=F, warning=F}
+
+# Boxplot
+
+boxplot(x = norm_data, 
+        cex.axis = 0.5, 
+        las = 2,  
+        which = "all", 
+        col = c(rep("seagreen4", 3), 
+                rep("saddlebrown", 3), 
+                rep("sienna3", 3), 
+                rep("slateblue3", 3)),
+        main = "Distribution of normalized intensity values", 
+        ylab = "Intensity")
+
+```
+
+<br>
+
+```{r quality control 2.5 (norm data), comment=NA}
+
+# Saving boxplot
+
+tiff(filename = "figures/Intensity_NormData.tiff", 
+     width = 5.5, 
+     height = 4.5, 
+     res = 200, 
+     units = "in")
+
+boxplot(x = norm_data, 
+        cex.axis = 0.5, 
+        las = 2, 
+        which = "all", 
+        col = c(rep("seagreen4", 3), 
+                rep("saddlebrown", 3), 
+                rep("sienna3", 3), 
+                rep("slateblue3", 3)),
+        main = "Distribution of normalized intensity values", 
+        ylab = "Intensity")
+
+dev.off()
+
+```
+
+<br>
+
+#### Batch detection
+
+<br>
+
+Gene expression microarray results can be affected by minuscule differences in any number of non-biological variables like reagents from different lots, different technicians and the more usual issue the different processing date of samples from the same experiment. The cumulative error introduced by these time and place-dependent experimental variations is referred to as “batch effects”. Different approaches have been developed for identifying and removing batch effects from microarray data like surrogate variable analysis, Combat and Principal variation component analysis (PVCA).
+
+<br>
+
+Here we will use the last one, Principal Variation Component Analysis, which estimates source and proportion of variation in two steps, principal component analysis, and variance component analysis. Only for illustration purposes we have added a new column to our targets file, with a fictitious sample processing date. We will perform the PVCA analysis before and after adding this columns to see the differences:
+
+<br>
+
+```{r}
+
+# Loading pvca package
+
+library(pvca)
+
+# Phenotipic data
+
+targets <- pData(eset_rma)
+
+# Select the threshold
+
+pct_threshold <- 0.6
+
+# Select the factors to analyze
+
+batch_factors <- c("Genotype", "Temperature")
+
+# Run the pvac Analysis
+
+pvca_obj <- pvcaBatchAssess(abatch = eset_rma, batch.factors = batch_factors, threshold = pct_threshold)
+
+```
+
+<br>
+
+#### Detecting most variable genes
+
+<br>
+
+Selection of differentially expressed genes is affected by the number of genes on which we make it. The higher the number, the greater the necessary adjustment of p-values (as will be seen below), which will lead us to end up miscarrying more genes.
+
+<br>
+
+If a gene is differentially expressed, it is expected that there is a certain difference between the groups, and therefore the overall variance of the gene will be greater than that of those that do not have differential expression. Plotting the overall variability of all genes is useful to decide which percentage of genes shows a variability that can be attributed to other causes than random variation. The figure below depicts the standard deviations of all genes sorted from smallest to biggest values. The plot shows that the most variable genes are those with a standard deviation above 90-95% of all standard deviations.
+
+<br>
+
+```{r detecting least variable genes 1, comment=NA}
+
+# SD plot
+
+sds <- apply(X = exprs_norm_data, MARGIN = 1, FUN = sd)
+sds_0 <- sort(sds)
+
+plot(x = 1:length(sds_0), 
+     y = sds_0, 
+     main = "Distribution of variability for all genes", 
+     xlab = "Gene index (from least to most variable)", 
+     ylab = "Standard deviation", 
+     abline(v = length(sds) * c(0.9, 0.95), 
+            lty = 2))
+
+```
+
+<br>
+
+```{r detecting least variable genes 2, comment=NA}
+
+# Saving SD Plot
+
+tiff(filename = "figures/SDplot.tiff", 
+     width = 5.5, 
+     height = 4.5, 
+     res = 200, 
+     units = "in")
+
+plot(x = 1:length(sds_0), 
+     y = sds_0, 
+     main = "Distribution of variability for all genes", 
+     xlab = "Gene index (from least to most variable)", 
+     ylab = "Standard deviation", 
+     abline(v = length(sds) * c(0.9, 0.95), 
+            lty = 2))
+
+dev.off()
+
+```
+
+<br>
+
+#### Filtering least variable genes
+
+<br>
+
+Filtering out those genes whose variability can be attributed to random variation (not expected to be differential expressed), has proven to be useful to reduce the number of tests to be performed with the corresponding increase in power ([Hackstadt and Hess, 2009](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-10-11)).
+
+<br>
+
+Function `nsFilter` from the bioconductor package `genefilter` can be used to remove genes based on a variability threshold. If an annotation package -associating probesets identifiers and gene identifiers from different databases- is available it can also be used to remove probesets which do not have a gene identifier associated.
+
+<br>
+
+```{r filtering out least variable genes 1, comment=NA}
+
+# Loading packages: genefilter & mogene21sttranscriptcluster.db
+
+library(genefilter)
+library(mogene21sttranscriptcluster.db)
+
+# 
+
+annotation(norm_data) <- "mogene21sttranscriptcluster.db"
+
+filtered <- nsFilter(eset = norm_data, require.entrez = T, 
+                     remove.dupEntrez = T, 
+                     var.filter = T, 
+                     var.func = IQR, 
+                     var.cutoff = 0.75, 
+                     filterByQuantile = T, 
+                     feature.exclude = "^AFFX")
+
+print(filtered$filter.log)
+
+norm_filtered_data <- filtered$eset
+exprs_norm_filtered_data <- exprs(norm_filtered_data)
+
+```
+
+<br>
+
+#### Saving normalized and filtered data
+
+<br>
+
+Normalized filtered data are the starting point for further analyses but we may want to go back to them, for example to review specific gene expression values. It is usual to save the binary objects but also to write expression values into text or excel files. Writing to Excel from R is not a trivial task -for strange it may seem- because different packages work differently depending of the operating system, so it is omitted from the code.
+
+<br>
+
+```{r saving data, comment=NA}
+
+# Exporting to csv the Expression matrix from raw data
+
+write.csv(x = exprs_raw_data, file = "results/raw.Data.csv")
+
+# Exporting to csv the Expression matrix from normalized data
+
+write.csv(exprs_norm_data, file = "results/normalized.Data.csv")
+
+# Exporting to csv the Expression matrix from normalized filtered data
+
+write.csv(exprs_norm_filtered_data, file = "results/normalized.Filtered.Data.csv")
+
+save(norm_data, norm_filtered_data, file = "./results/normalized.Data.Rda")
+
+```
+
+<br>
+
+#### Defining the experimental setup: The design matrix
+
+<br>
+
+Selection of differential expressed genes basically consists of doing some type of test, usually on a gene-wise basis, to compare gene expression between groups. This can be done using many different approaches (see Chrominski and Tkacz (2015)). There is a general agreement that using standard statistical tests such as t-tests is not appropriate Jeanmougin et al. (2010) and that better options are methods that perform some type of variance shrinking Allison et al. (2006). Techniques specifically developed for microarrays such as SAM Tusher, Tibshirani, and Chu (2001) or Linear Models for Microarrays Smyth (2004) have proved to produce much better results Chrominski and Tkacz (2015).
+
+<br>
+
+In this protocol the Linear Models for Microarrays method, implemented in the limma package Smyth (2005) is used to select differential expressed genes.
+
+<br>
+
+The first step for the analysis based on linear models is to create the **design matrix**. Basically it is a table that describes the allocation of each sample to a group or experimental condition. It has as many rows as samples and as many columns as groups (if only one factor is considered). Each row contains a one in the column of the group to which the sample belongs and a zero in the others.
+
+<br>
+
+The design matrix can be defined manually or from a factor variable that may have been introduced in the “targets” file with this aim created specifically for it. In this study that “Group” variable is a combination of the two experimental conditions, “KO/Wild” and “RT/COLD” which are jointly represented as one factor with 4 levels.
+
+<br>
+
+```{r defining the design matrix, comment=NA}
+
+# Loading the limma package
+
+library(limma)
+
+# Generating the design matrix
+
+design_matrix <- model.matrix(object = ~ 0 + Group, 
+                              data = pData(object = norm_filtered_data))
+
+colnames(design_matrix) <- c("KO.COLD", "KO.RT", "WT.COLD", "WT.RT")
+
+print(design_matrix)
+
+```
+
+<br>
+
+#### Defining comparisons with the Contrasts Matrix
+
+<br>
+
+The contrasts matrix is used to describe the comparisons between groups. It consists of as many columns as comparisons and as many rows as groups (that is, as columns of the design matrix). A comparison between groups - called “contrast” - is represented by a “1” and a “-1” in the rows of groups to compare and zeros in the rest. If several groups intervened in the comparison would have as many coefficients as groups with the only restriction that its sum would be zero.
+
+<br>
+
+In this example we want to check the effect of knocking out a gene (“KO vs WT”) separately for cold and RT temperature. Also we want to test if there is interaction between knocking out the gene and temperature. This can be done by doing three comparisons described below:
+
+<br>
+
+```{r defining the contrast matrix, comment=NA}
+
+# Creating the contras matrix
+
+contrast_matrix <- makeContrasts(KOvsWT.COLD = KO.COLD - WT.COLD,
+                                 KOvsWT.RT = KO.RT - WT.RT,
+                                 INT = (KO.COLD - WT.COLD) - (KO.RT - WT.RT), 
+                                 levels = design_matrix)
+
+print(contrast_matrix)
+
+```
+
+
+<br>
+
+#### Model estimation and gene 
+
+<br>
+
+Once the **design matrix** and the **contrasts** have been defined, we can proceed to estimate the model, estimate the contrasts and perform the significance tests that will lead to the decision, for each gene and each comparison, if they can be considered differential expressed.
+
+<br>
+
+The method implemented in the `limma` package extends the traditional analysis using Empirical Bayes models to combine an estimate of variability based on the entire matrix with individual estimates based on each individual values providing improved error estimates Smyth (2004).
+
+<br>
+
+The analysis provides the usual test statistics such as Fold-change t-moderated or adjusted p-values that are used to order the genes from more unless differential expressed.
+
+In order to control the percentage of false positives that may result from high number of contrasts made simultaneously the p-values are adjusted so that we have control over the false positive rate using the Benjamini and Hochberg method Benjamini and Hochberg (1995).
+
+All relevant information for further exploration of the results is stored in an R object of class MArrayLM defined in the limma package. Here it is named as fit.main.
+
+
+
+<br>
+
+#### Gene Annotation
+
+<br>
+
+Once we have the **top table** it is useful to provide additional information on the features that have been selected. This process is called “annotation” and essentially what it does is to look for information to associate identifiers that appear in the top table, usually corresponding to probesets or transcripts depending of the array type, with more familiar names such as the Gene Symbol, the Entrez Gene identifier or the Gene description.
+
+<br>
+
+For simplicity, because there are three toptables (one for each comparision), a function annotating one topTable with a given package is prepared and used.
+
+<br>
+
+```{r comment=NA}
+
+annotatedTopTable <- function(top.table, annot.package){
+  
+  top_tab <- cbind(PROBEID = rownames(top.table), top.table)
+  my_probes <- rownames(top.tab)
+  the_package <- eval(parse(text = annot.package))
+  gene_annots <- select(the_package, my_probes, c("SYMBOL", "ENTREZID", "GENENAME"))
+  annotated_top_tab <- merge(x = gene_annots, y = top_tab, by.x = "PROBEID", by.y = "PROBEID")
+  return(annotated_top_tab)
+  
+}
+
+```
+
+</div>

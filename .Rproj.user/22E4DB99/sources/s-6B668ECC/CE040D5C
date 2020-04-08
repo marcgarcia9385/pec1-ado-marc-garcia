@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1586247500625.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "914427220",
+    "id" : "CE040D5C",
+    "lastKnownWriteTime" : 1586188300,
+    "last_content_update" : 1586188300,
+    "path" : "~/Màster Bioestadística i Bioinfo/Análisis de datos Ómicos/breast cancer/breast-cancer.Rmd",
+    "project_path" : null,
+    "properties" : {
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

@@ -1,0 +1,390 @@
+# PEC1: Análisis de Datos Ómicos
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Estableciendo el directorio de trabajo
+
+setwd("C:/Users/USER/Documents/Màster Bioestadística i Bioinfo/Análisis de datos Ómicos/PECS/ADO_PEC1_Marc_Garcia/")
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Preparando el entorno de trabajo 
+
+dir.create("data/")
+dir.create("results/")
+dir.create("other/")
+dir.create("figures/")
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Carga de paquetes
+
+library(Biobase)
+library(oligo)
+library(arrayQualityMetrics)
+library(ggplot2)
+library(ggrepel)
+library(viridis)
+library(genefilter)
+library(mouse4302.db)
+library(limma)
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Cargando archivos CEL (ExpressionSet)
+
+data_dir <- file.path("data/")
+ 
+cel_files <- list.celfiles(data_dir, 
+                           full.names = T)
+
+targets_file <- read.AnnotatedDataFrame(path = "data/", 
+                                        filename = "targets.csv",
+                                        header = T, 
+                                        row.names = 1, 
+                                        sep = ";")
+
+raw_data <- read.celfiles(cel_files, 
+                           phenoData = targets_file)
+
+# --------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Exploración datos crudos (raw data) + cambio nombre muestras
+
+# 1) Exploración
+
+head(exprs(raw_data)[ , 1:8], 10)                   # Matriz de expresión (raw_data)
+pData(raw_data)                                     # Datos fenotípicos (raw data)
+head(featureNames(raw_data), 10)                    # Nombre de los genes/probesets (10/1004004)
+varLabels(raw_data)                                 # Nombre Covariables
+head(sampleNames(raw_data), 8)                      # Nombre de las muestras (8/27)
+
+# 2) Cambio de nombres
+
+rownames(raw_data@phenoData@data) <- targets_file@data$ShortName
+sampleNames(raw_data) <- pData(raw_data)$ShortName
+head(exprs(raw_data)[ , 1:20], 10)
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Primer control de calidad (raw data)
+
+# 1) arrayQualityMetrics
+
+arrayQualityMetrics(expressionset = raw_data, 
+                    outdir = file.path("results/", "QCDir.Raw"), 
+                    force = T, 
+                    intgroup = c("Group"))
+
+# 2) PCA plot + boxplot
+
+# 2.1) PCA plot
+
+plotPCA3 <- function (datos, labels, factor, title, scale, size = 1.5, glineas = 0.25) {
+  data <- prcomp(t(datos), scale = scale)
+  
+  # plot adjustments
+  
+  dataDf <- data.frame(data$x)
+  Group <- factor
+  loads <- round(data$sdev^2/sum(data$sdev^2) * 100, 1)
+  
+  # main plot
+  
+  p1 <- ggplot(data = dataDf, aes(x = PC1, y = PC2)) +
+    theme_classic() +
+    geom_hline(yintercept = 0, color = "gray70") +
+    geom_vline(xintercept = 0, color = "gray70") +
+    geom_point(aes(color = Group), size = 2) +
+    coord_cartesian(xlim = c(min(data$x[ , 1]) - 5, max(data$x[ , 1]) + 5)) +
+    scale_fill_discrete(name = "Group") +
+    theme(axis.title.y = element_text(size = 10,
+                                      margin = margin(t = 0, r = 10, b = 0, l = 0)),
+          axis.title.x = element_text(size = 10,
+                                      margin = margin(t = 10, r = 0, b = 0, l = 0)),
+          axis.text = element_text(size = 7), 
+          legend.text = element_text(size = 6),
+          legend.title = element_text(size = 8),
+          legend.key.size = unit(0.4, "cm"),
+          legend.key.width = unit(0.5,"cm")) 
+  
+  # avoiding labels superposition
+  
+  p1 + geom_text_repel(aes(y = PC2 + 0.25, label = labels), segment.size = 0.25, size = size) + 
+    labs(x = c(paste("PC1", loads[1], "%")), y = c(paste("PC2", loads[2], "%"))) +  
+    ggtitle(paste("Principal Component Analysis for: ", title, sep = " ")) + 
+    theme(plot.title = element_text(hjust = 0.5)) +
+    scale_color_viridis(discrete = T)
+}
+
+tiff("figures/PCA_RawData.tiff", 
+     res = 200, 
+     width = 7, 
+     height = 4.5, 
+     units = 'in')
+
+plotPCA3(datos = exprs(raw_data), 
+         labels = targets_file$ShortName, 
+         factor = targets_file$Group, 
+         title = "Raw data", 
+         scale = F, 
+         size = 1.5)
+
+dev.off()
+
+# 2.2) Boxplot
+
+tiff(filename = "figures/Intensity_RawData.tiff", 
+     width = 5.5, 
+     height = 4.5, 
+     res = 200, 
+     units = "in")
+
+boxplot(x = raw_data, 
+        cex.axis = 0.5, 
+        las = 2, 
+        which = "all", 
+        col = c(rep("gray7", 3),
+                rep("#440154FF", 3), 
+                rep("#453781FF", 3), 
+                rep("#33638DFF", 3), 
+                rep("#238A8DFF", 3),
+                rep("#20A387FF", 3), 
+                rep("#55C667FF", 3), 
+                rep("#B8DE29FF", 3), 
+                rep("#FDE725FF", 3)),
+        main = "Distribution of raw intensity values", 
+        xlab = "Sample",
+        ylab = "Intensity")
+
+dev.off()
+
+# 3) Eliminación de arrays defectuosos
+
+raw_data_2 <- raw_data[ , -4]
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Normalización
+
+norm_data <- rma(raw_data_2)
+
+print(head(exprs(norm_data)[, 1:17]), 10, 
+      digits = 2)
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Segundo control de calidad (normalized data)
+
+# 1) arrayQualityMetrics
+
+arrayQualityMetrics(expressionset = norm_data, 
+                    outdir = file.path("results/", "QCDir.Norm"), 
+                    force = T, 
+                    intgroup = c("Group"))
+
+# 2) PCA plot + boxplot
+
+# 2.1) PCA plot
+
+tiff("figures/PCA_NormData.tiff", 
+     res = 200, 
+     width = 7, 
+     height = 4.5, 
+     units = 'in')
+
+plotPCA3(datos = exprs(norm_data), 
+         labels = targets_file@data$ShortName[-4], 
+         factor = targets_file@data$Group[-4], 
+         title = "Normalized data", 
+         scale = F, 
+         size = 1.5)
+
+dev.off()
+
+# 2.2) Boxplot
+
+tiff(filename = "figures/Intensity_NormData.tiff", 
+     width = 5.5, 
+     height = 4.5, 
+     res = 200, 
+     units = "in")
+
+boxplot(x = norm_data, 
+        cex.axis = 0.5, 
+        las = 2, 
+        which = "all", 
+        col = c(rep("gray7", 3),
+                rep("#440154FF", 2), 
+                rep("#453781FF", 3), 
+                rep("#33638DFF", 3), 
+                rep("#238A8DFF", 3),
+                rep("#20A387FF", 3), 
+                rep("#55C667FF", 3), 
+                rep("#B8DE29FF", 3), 
+                rep("#FDE725FF", 3)),
+        main = "Distribution of raw intensity values",
+        xlab = "Samples",
+        ylab = "Intensity")
+
+dev.off()
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Filtrando genes con mayor variabilidad
+
+# 1) SD plot
+
+sds <- apply(X = exprs(norm_data), MARGIN = 1, FUN = sd)
+sds_0 <- sort(sds)
+
+tiff(filename = "figures/SDplot.tiff", 
+     width = 5.5, 
+     height = 4.5, 
+     res = 200, 
+     units = "in")
+
+plot(x = 1:length(sds_0), 
+     y = sds_0, 
+     main = "Distribution of variability for all genes", 
+     xlab = "Gene index (from least to most variable)", 
+     ylab = "Standard deviation", 
+     abline(v = length(sds) * c(0.9, 0.95), 
+            lty = 2))
+
+dev.off()
+
+# 2) Eliminando genes con baja desviación típica, no anotados o duplicados
+
+annotation(norm_data) <- "mouse4302.db"
+
+filtered <- nsFilter(eset = norm_data, 
+                     require.entrez = T, 
+                     remove.dupEntrez = T, 
+                     var.filter = T, 
+                     var.func = IQR, 
+                     var.cutoff = 0.85, 
+                     filterByQuantile = T, 
+                     feature.exclude = "^AFFX")
+
+print(filtered$filter.log)
+
+norm_filtered_data <- filtered$eset
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Guardando matrices de expresión
+
+# 1) Datos crudos (Raw data)
+
+write.csv(x = exprs(raw_data), 
+          file = "results/raw.Data.csv")
+
+# 2) Datos normalizados (Normalized data)
+
+write.csv(x = exprs(norm_data), 
+          file = "results/normalized.Data.csv")
+
+# 3) Datos normalizados + filtrados (Filtered data)
+
+write.csv(x = exprs(filtered_data), 
+          file = "results/normalized.Filtered.Data.csv")
+
+save(norm_data, norm_filtered_data, 
+     file = "./results/normalized.Data.Rda")
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Definiendo la matriz de diseño
+
+design_matrix <- model.matrix(object = ~ 0 + Group, 
+                              data = pData(object = norm_filtered_data))
+
+colnames(design_matrix) <- c("FR", "AC", "CT", "AR", "DHA",
+                             "DR", "EFA", "HF", "LAR")
+
+print(design_matrix)
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Definiendo la matriz de contrastes
+
+contrast_matrix <- makeContrasts(CTvsFR = CT - FR,
+                                 CTvsAC = CT - AC,
+                                 CTvsAR = CT - AR,
+                                 CTvsDHA = CT - DHA,
+                                 CTvsDR = CT - DR,
+                                 CTvsEFA = CT - EFA,
+                                 CTvsHF = CT - HF,
+                                 CTvsLAR = CT - LAR,
+                                 levels = design_matrix)
+
+print(contrast_matrix)
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------
+
+fit <- lmFit(object = norm_filtered_data, design = design_matrix)
+fit_main <- contrasts.fit(fit = fit, contrasts = contrast_matrix)
+fit_main <- eBayes(fit = fit_main)
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Obteniendo listas de genes diferencialmente expresados
+
+# 1) CT vs DR (Control vs 60% Fructose Diet)
+
+top_table_CTvsFR <- topTable(fit = fit_main, 
+                             number = nrow(fit_main), 
+                             coef = "CTvsFR", 
+                             adjust = "fdr") 
+head(top_table_CTvsFR)
+
+# 2) CT vs AC (Control vs Adjusted Calories Diet -> 42% grasa)
+
+top_table_CTvsAC <- topTable(fit = fit_main, 
+                             number = nrow(fit_main), 
+                             coef = "CTvsAC", 
+                             adjust = "fdr") 
+head(top_table_CTvsAC)
+
+# 3) CT vs AR (Control vs Atherogenic Rodent Diet)
+
+top_table_CTvsAR <- topTable(fit = fit_main, 
+                             number = nrow(fit_main), 
+                             coef = "CTvsAR", 
+                             adjust = "fdr") 
+head(top_table_CTvsAR)
+
+# 4) CT vs DHA (Control vs DHA-Suplemented Diet)
+
+top_table_CTvsDHA <- topTable(fit = fit_main, 
+                              number = nrow(fit_main), 
+                              coef = "CTvsDHA", 
+                              adjust = "fdr") 
+head(top_table_CTvsDHA)
+
+# 5) CT vs DR (Control vs Diet-Restriction)
+
+top_table_CTvsDR <- topTable(fit = fit_main, 
+                             number = nrow(fit_main), 
+                             coef = "CTvsDR", 
+                             adjust = "fdr") 
+head(top_table_CTvsDR)
+
+# 6) CT vs EFA (Control vs EFA-Deficient Diet)
+
+top_table_CTvsEFA <- topTable(fit = fit_main, 
+                              number = nrow(fit_main), 
+                              coef = "CTvsEFA", 
+                              adjust = "fdr") 
+head(top_table_CTvsEFA)
+
+# 7) CT vs HF (Control vs High fat Diet)
+
+top_table_CTvsHF <- topTable(fit = fit_main, 
+                             number = nrow(fit_main), 
+                             coef = "CTvsHF", 
+                             adjust = "fdr") 
+head(top_table_CTvsHF)
+
+# 8) CT vs LAR (Control vs Diet used in LAR)

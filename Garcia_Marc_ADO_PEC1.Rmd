@@ -1,0 +1,240 @@
+---
+title: "PEC1: Liver mRNA microarray study for mice treated with various diets"
+author: "Marc Garcia"
+date: "7/4/2020"
+output:
+  html_document:
+    theme: united
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+header-includes:
+  - \usepackage{booktabs}
+---
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(root.dir = "C:/Users/USER/Documents/Màster Bioestadística i Bioinfo/Análisis de datos Ómicos/PECS/ADO_PEC1_Marc_Garcia/")
+
+```
+
+* * *
+
+<div align = "justify">
+
+# Abstract
+
+<br>
+
+En este estudio, se pretende investigar los efectos de 9 diferentes dietas sobre la expresión de genes relacionados con las vías metabólicas intermedias del hígado. Para ello, se han utilizado ejemplares masculinos adultos de ratón que han sido alimentados durante 3 semanas con la dieta correspondiente (3 por grupo) y de los cuales se han extraído muestras de tejido hepático. La expresión en estas muestras ha sido determinada mediante microarrays de un color de Affymetrix (*Affymetrix Mouse 430 2.0 Gene*). El procesado de los datos y la búsqueda de genes diferencialmente expresados (DEG) entre grupos se ha realizado mediante el uso del software estadístico [R](https://cran.r-project.org/index.html) (3.6.2) y de paquetes del proyecto [BioConductor](https://www.bioconductor.org/) (3.10). Los datos y el código relacionados con el análisis pueden ser consultados en el siguiente [repositorio GitHub].
+ 	
+<br>
+
+* * *
+
+# Objetivos
+
+<br>
+
+El objetivo del estudio es, mediante un protocolo de análisis muy extendido entre la comunidad científica, determinar si existen diferencias en la expresión génica de hepatocitos de ratón en función de la dieta del animal. Para ello se 
+
+<br>
+
+* * *
+
+# Materiales & Métodos
+
+<br>
+
+## Materiales
+
+<br>
+
+### Datos
+
+<br>
+
+Para este análisis se han utilizado los datos de un estudio publicado por Cui et al. (2014). Estos se encuentran disponibles en la base de datos GEO (*Gene Expression Omnibus*), un servidor web que subministra, entre otros, datos relacionados con experimentos realizados con microarrays. Podemos acceder a nuestros datos mediante el código alfanumérico siguiente: [GSE51885](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE51885), desde donde podremos podemos descargar los archivos `.CEL` correspondientes a cada uno de los arrays (`GSE51885_RAW.tar`). 
+
+<br>
+
+El estudio que generó estos datos investigava el efecto de nueve dietas diferentes (*Tabla 1*) sobre la expresión de genes de las vías metabólicas intermedias del hígado. Para ello, ejemplares de ratones macho adultos (3 réplicas) fueron alimentados durante 3 semanas con una de las dietas siguientes:
+
+<br>
+
+**1) TD.94048:** AIN-93M purified diet (control diet).
+
+**2) TD.8604:** Natural ingredient diet (used in our animal facility) (Lab chow).
+
+**3) TD.89247:** 60% fructose diet.
+
+**4) TD.97070:** High-fat diet.
+
+**5) TD.88137:** High-saturated fat and - sucrose diet (Western diet).
+
+**6) TD.02028:** High-fat, -sucrose, -cholesterol, and -cholic acid (CA) diet (atherogenic diet).
+
+**7) TD.8422** Essential fatty acid (EFA) deficient diet.
+
+**8) TD.00235 + 7% sunflower oil** (low n-3 diet) [20].
+
+**9) Diet restriction:** 75% of the diet TD.8604 consumed by ad lib feeding.
+
+<br>
+
+```{r, echo=F, warning=F, message=F}
+
+media <- read.csv(file = "other/media composition.csv", 
+                  header = T, 
+                  sep = ";")
+
+library(knitr)
+library(kableExtra)
+
+kable(x = media, 
+      format = "html",
+      align = "ccccccc", 
+      caption = "**Table 1: Macronutrients in each diet.**") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                font_size = 12, 
+                fixed_thead = T) %>%
+  row_spec(0, bold = T, color = "white", background = "#482677FF")
+
+```
+
+<br>
+
+A continuación, los ratones fueron eutanizados (8:00-10:00 A.M.), obteniéndose muestras de sangre y de tejido hepático. De las muestras de tejido hepático se extrajo y se purificó el ARN total mediante en el uso de los reactivos *RNAzol B* y *RNA Bee* respecitvamente. Seguidamente, se cuantificó la concentración de ARN utilizando un espectrofotómetro NanoDrop ($\lambda$ = 260 nm) y se evaluó la integridad de las muestras mediante electroforesis en gel de agarosa. La expresión de genes de cada muestra fue determinada mediante el uso de microarrays de un color de tipo *Affymetrix Mouse 430 2.0 Gene*. Todos los protocolos utilizados fueron aprovados por el IACUC (*Institutional Animal Care and Use Committee*).
+
+<br>
+
+En síntesis, nos encontramos frente a un diseño factorial con un factor (**Dieta**) de 9 niveles. Cada nivel conforma una única unidad experimental compuesta de tres réplicas biológicas (3 ratones) y, por lo tanto, el tamaño muestral del experimento es de 27 muestras.
+
+<br>
+
+## Métodos
+
+<br>
+
+El análisis de datos de microarrays se puede realizar siguiendo protocolos muy variables. En esta sección del informe se intenta resumir el *workflow* estándar de uno de estos análisis proponiendo métodos específicos para cada uno de los pasos. 
+
+<br>
+
+### Preparando el entorno de trabajo
+
+<br>
+
+Para facilitar el análisis, intentaremos almacenar todos los datos de origen y los resultados generados siguiendo un criterio lógico de ordenación. En esta dirección, crearemos un pequeño subconjunto de directorios dentro de nuestro directorio de trabajo (*`r getwd()`*). Básicamente este subconjunto estará formado por los cuatro directorios siguientes:
+
+<br>
+
++ `data`: contendrá los 27 archivos `.CEL` y el archivo `targets`.
++ `results`: contendrá todos los resultados generados durante el análisis. Esto incluye los informes de los controles de calidad y las matrices de expresión intermedias que iremos creando.
++ `figures`: aquí guardaremos las figuras generadas durante el análisis.
++ `other`: incluirá otros tipos de contenido como la tabla con la composición de las diferentes dietas.
+
+
+```{r preparando el entorno de trabajo, eval=F, include=F}
+
+dir.create("data/")
+dir.create("results/")
+dir.create("other/")
+dir.create("figures/")
+
+```
+
+<br>
+
+### Leyendo los datos
+
+<br>
+
+La preparación de los datos para su análisis implica normalmente la construcción de un objeto de tipo `ExpressionSet` a partir de los ficheros `.CEL` (**raw data**) y el archivo `targets.csv`. Los primeros contienen los valores de fluorescencia de cada array (uno por chip) mientras que el segundo (*Tabla 2*) contiene información acerca de los grupos y las covariables que los definen.
+
+<br>
+
+```{r contenido del fichero targets, echo=F}
+
+targets <- read.csv(file = "data/targets.csv", 
+                    header = T,
+                    sep = ";")
+
+kable(x = targets,
+      format = "html",
+      align = "ccccccc", 
+      caption = "**Tabla 2: Contenido del fichero targets.csv**") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                font_size = 12, 
+                fixed_thead = T) %>%
+  row_spec(0, bold = T, color = "white", background = "#482677FF")
+```
+
+<br>
+
+Nosotros, para generar este objeto (`raw_data`), crearemos por un lado un **dataset anotado** a partir del contenido del archivo `targets.csv` (`targets_file`). Finalmente, mediante la función `read.celfiles()` del paquete `oligo`, leeremos el contenido de los ficheros `.CEL` y lo combinaremos con el contenido del objeto `targets_file` en un único objeto de tipo `ExpressionSet`.
+
+<br>
+
+### Primer control de calidad (raw data)
+
+<br>
+
+Una vez creado el `ExpressionSet` con los "datos crudos" (**raw data**), es necesario realizar un primer control de calidad para determinar si nuestros datos tienen la calidad suficiente para ser normalizados y posteriormente analizados. Este paso es crucial, ya que si no identificamos y eliminamos los arrays defectuosos, introduciremos ruido al análisis que no podrá ni siquiera ser eliminado mediante la normalización. Existen gran cantidad de métodos para determinar la calidad de los arrays, siendo la mayoría análisis gráficos. El uso de uno u otro depende principalmente del tipo de array (uno o dos colores), del tipo de dato (raw o normalizado) y de nuestras preferencias (*Tabla 3*). Con el objetivo de tomar decisiones más precisas, es recomendable combinar siempre diferentes alternativas. 
+
+<br>
+
+```{r tipos control de calidad, echo=F}
+
+quality <- readxl::read_xlsx("other/quality control.xlsx")
+
+kable(x = quality, 
+      format = "html",
+      align = "ccccccc", 
+      caption = "**Tabla 3: Procedimientos de visualización y control de calidad según el tipo de datos y el tipo de microarrays. Adaptación del libro Pla et al. (2013)**") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                font_size = 12, 
+                fixed_thead = T) %>%
+  row_spec(0, bold = T, color = "white", background = "#482677FF") %>%
+  collapse_rows(1, valign = "middle")
+  
+```
+
+<br>
+
+Una opción muy interesante consiste en utilizar la función `arrayQualityMetrics()` del paquete con el mismo nombre. Básicamente, esta función realiza el control de calidad automáticamente y crea un nuevo directorio con los resultados. Este directorio incluye la figuras correspondientes a cada uno de los análisis además de un archivo html (`index.html`) que contiene un informe dinámico. En la parte superior del informe se incluye una tabla donde cada fila corresponde a un array y en las columnas se especifica el grupo y el valor de las covariables. Además, y esto es lo más interesante, se incluyen 3 columnas numeradas del 1 al 3 que indican la calidad del array. En general si el array contiene una o ninguna cruz en estas tres variables, la calidad del array es suficiente y podemos normalizar. Si contiene 2 dependerá del contexto y de nuestra situación. Finalmente, si contiene 3 se acostumbra a eliminar siempre.
+
+<br>
+
+### Normalización
+
+<br>
+
+Una vez elimninados los arrays defectuosos, se deben normalizar los datos crudos. De este modo, estos serán comparables y eliminaremos toda la variabilidad que no es debida a razones biológicas. El proceso de normalización está constituido de las tres siguientes etapas: , normalización y sumarización. Nosotros hemos utilizado uno de los métodos más comunes (https://doi.org/10.1093/biostatistics/4.2.249.). Para implementarlo hemos utilizado la función `rma()` del paquete `oligo`.
+
+* * *
+ 	
+# Resultados
+
+<br>
+
+* * *
+
+# Discusión
+
+<br>
+
+* * *
+
+# Referencias
+
+<br>
+
+* * *
+
+# Apéndice
+
+
+</div>
