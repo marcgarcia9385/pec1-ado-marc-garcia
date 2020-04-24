@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1586885387517.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "94|88|129|0|\n131|37|179|0|\n204|38|252|0|\n392|24|402|0|\n442|53|457|0|\n463|47|545|0|\n561|52|818|0|\n819|44|986|0|\n1075|38|1131|0|\n1135|38|1191|0|\n1212|36|1230|0|\n1244|34|1321|0|\n1265|49|1320|2|\n1285|25|1302|4|\n",
+    "hash" : "0",
+    "id" : "87607D61",
+    "lastKnownWriteTime" : 1587719485,
+    "last_content_update" : 1587719485441,
+    "path" : "~/Màster Bioestadística i Bioinfo/Análisis de datos Ómicos/PECS/ADO_PEC1_Marc_Garcia/Garcia_Marc_ADO_PEC1.R",
+    "project_path" : "Garcia_Marc_ADO_PEC1.R",
+    "properties" : {
+        "cursorPosition" : "37,13",
+        "scrollLine" : "13",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

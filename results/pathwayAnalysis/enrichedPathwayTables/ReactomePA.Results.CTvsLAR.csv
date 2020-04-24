@@ -1,0 +1,12 @@
+"ID","Description","GeneRatio","BgRatio","pvalue","p.adjust","qvalue","geneID","Count"
+"R-MMU-211859","Biological oxidations","21/270","202/8772",9.57309535905682e-07,0.000529392173355842,0.000513924066644103,"Cyp2c55/Ephx1/Cyp3a25/Cyp3a44/Ugdh/Cyp3a11/Gstt2/Mgst3/Cyp4a14/Gsto1/Gclm/Gstm4/Ugt2b35/Sult1c2/Cyb5r3/Cyp7b1/Aldh1a1/Ptgs1/Cyp39a1/Cyp26a1/Maoa",21
+"R-MMU-8978868","Fatty acid metabolism","18/270","169/8772",4.14171796531319e-06,0.0011451850174091,0.00111172429595249,"Cyp4a14/Elovl5/Thrsp/Acaca/Cbr1/Fasn/Acacb/Fads2/Ehhadh/Acaa1a/Ptgs1/Acot1/Aldh3a2/Elovl2/Prkaa2/Prkag2/Scd1/Acly",18
+"R-MMU-211945","Phase I - Functionalization of compounds","13/270","108/8772",2.51717985415491e-05,0.00464000153115889,0.00450442710743511,"Cyp2c55/Ephx1/Cyp3a25/Cyp3a44/Cyp3a11/Cyp4a14/Cyb5r3/Cyp7b1/Aldh1a1/Ptgs1/Cyp39a1/Cyp26a1/Maoa",13
+"R-MMU-200425","Import of palmitoyl-CoA into the mitochondrial matrix","5/270","14/8772",4.24283294921881e-05,0.00577474936695049,0.00560601918177358,"Thrsp/Acaca/Acacb/Prkaa2/Prkag2",5
+"R-MMU-8979227","Triglyceride metabolism","6/270","23/8772",5.22129237518127e-05,0.00577474936695049,0.00560601918177358,"Fabp5/Fabp2/Pnpla5/Fabp7/Lpin1/Gpam",6
+"R-MMU-163560","Triglyceride catabolism","4/270","11/8772",0.000244175427715593,0.0225048352544538,0.0218472751113952,"Fabp5/Fabp2/Pnpla5/Fabp7",4
+"R-MMU-75105","Fatty acyl-CoA biosynthesis","6/270","33/8772",0.000442255267126226,0.0331888232151864,0.032219091728838,"Elovl5/Acaca/Fasn/Elovl2/Scd1/Acly",6
+"R-MMU-196854","Metabolism of vitamins and cofactors","15/270","182/8772",0.000480127641449351,0.0331888232151864,0.032219091728838,"Akr1c19/Apoa4/Aox1/Nt5e/Gsto1/Acaca/Fasn/Hsp90aa1/Acacb/Slc23a1/Cyb5r3/Pank3/Shmt1/Bco1/Parp14",15
+"R-MMU-2046104","alpha-linolenic (omega3) and linoleic (omega6) acid metabolism","4/270","14/8772",0.000688431407554159,0.038070256837745,0.0369578966160654,"Elovl5/Fads2/Acaa1a/Elovl2",4
+"R-MMU-2046106","alpha-linolenic acid (ALA) metabolism","4/270","14/8772",0.000688431407554159,0.038070256837745,0.0369578966160654,"Elovl5/Fads2/Acaa1a/Elovl2",4
+"R-MMU-196849","Metabolism of water-soluble vitamins and cofactors","11/270","118/8772",0.000991993662371135,0.049870226844658,0.0484130878286391,"Aox1/Nt5e/Gsto1/Acaca/Fasn/Acacb/Slc23a1/Cyb5r3/Pank3/Shmt1/Parp14",11

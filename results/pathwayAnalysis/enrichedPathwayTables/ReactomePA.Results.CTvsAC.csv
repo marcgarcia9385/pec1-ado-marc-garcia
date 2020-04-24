@@ -1,0 +1,20 @@
+"ID","Description","GeneRatio","BgRatio","pvalue","p.adjust","qvalue","geneID","Count"
+"R-MMU-191273","Cholesterol biosynthesis","16/484","25/8772",7.47538664675851e-15,6.27184939663039e-12,5.99604697350525e-12,"Idi1/Cyp51/Sqle/Msmo1/Hmgcr/Fdft1/Fdps/Nsdhl/Pmvk/Dhcr7/Mvd/Tm7sf2/Lss/Hmgcs1/Sc5d/Hsd17b7",16
+"R-MMU-8978868","Fatty acid metabolism","32/484","169/8772",5.52989989995888e-10,1.69616438394756e-07,1.62157613771789e-07,"Aldh3a2/Ehhadh/Cyp4a14/Acsl4/Acadm/Acox1/Acsl1/Nudt7/Acacb/Hsd17b12/Acly/Mid1ip1/Acot1/Cyp4f15/Elovl2/Fads2/Acot2/Fasn/Eci2/Scp2/Cyp4a31/Acaa2/Hacd3/Fads1/Acad11/Ptgs1/Cpt1a/Acox2/Acot4/Cyp4f14/Elovl1/Acot3",32
+"R-MMU-8957322","Metabolism of steroids","27/484","125/8772",6.0649501213858e-10,1.69616438394756e-07,1.62157613771789e-07,"Idi1/Cyp51/Sqle/Msmo1/Hmgcr/Fdft1/Fdps/Nsdhl/Pmvk/Dhcr7/Mvd/Tm7sf2/Abcc3/Cyp17a1/Lss/Osbpl3/Hmgcs1/Hsd17b12/Cyp39a1/Srd5a1/Slco1b2/Sc5d/Stard4/Hsd17b11/Scp2/Acox2/Hsd17b7",27
+"R-MMU-2046104","alpha-linolenic (omega3) and linoleic (omega6) acid metabolism","7/484","14/8772",3.64657080642166e-06,0.000611894581317555,0.000584986727261749,"Acox1/Acsl1/Elovl2/Fads2/Scp2/Fads1/Elovl1",7
+"R-MMU-2046106","alpha-linolenic acid (ALA) metabolism","7/484","14/8772",3.64657080642166e-06,0.000611894581317555,0.000584986727261749,"Acox1/Acsl1/Elovl2/Fads2/Scp2/Fads1/Elovl1",7
+"R-MMU-9033241","Peroxisomal protein import","14/484","64/8772",7.498759018708e-06,0.00104857646944934,0.00100246567934307,"Ehhadh/Paox/Acox1/Nudt7/Dhrs4/Acot1/Acot2/Eci2/Scp2/Lonp2/Acox2/Acot4/Ubc/Acot3",14
+"R-MMU-9609507","Protein localization","18/484","105/8772",1.49374218957014e-05,0.00179035671007049,0.00171162638865029,"Aldh3a2/Ehhadh/Paox/Acox1/Nudt7/Dhrs4/Acot1/Acot2/Eci2/Scp2/Lonp2/Acox2/Acot4/Pxmp4/Abcd2/Ubc/Abcd3/Acot3",18
+"R-MMU-211945","Phase I - Functionalization of compounds","18/484","108/8772",2.22508270956272e-05,0.0023335554916539,0.00223093819037736,"Cyp51/Ephx1/Acss2/Cyp3a25/Cyp4a14/Paox/Cyb5r3/Cyp39a1/Cyp26a1/Cyp4f15/Hsp90ab1/Cmbl/Cyp3a11/Cyp4a31/Cyp2a12/Ptgs1/Cyp4f14/Aldh1a1",18
+"R-MMU-174824","Plasma lipoprotein assembly, remodeling, and clearance","12/484","57/8772",5.04084456033116e-05,0.00469918731790872,0.0044925421695583,"Pcsk9/Soat1/Angptl4/Apob/Apoc2/Lipa/Angptl8/Apoa4/Pltp/Hdlbp/Ldlr/Nceh1",12
+"R-MMU-390918","Peroxisomal lipid metabolism","8/484","28/8772",9.44427387099142e-05,0.0079237457777618,0.0075753017786268,"Aldh3a2/Ehhadh/Acox1/Nudt7/Eci2/Scp2/Acox2/Acot4",8
+"R-MMU-8964038","LDL clearance","6/484","16/8772",0.000136227131970661,0.010390414883944,0.009933499958052,"Pcsk9/Soat1/Apob/Lipa/Ldlr/Nceh1",6
+"R-MMU-196854","Metabolism of vitamins and cofactors","23/484","182/8772",0.000160646905560472,0.0108760949310423,0.0103978223918879,"Rdh11/Apom/Aasdhppt/Acacb/Aox1/Cyb5r3/Mmab/Apob/Apoc2/Fasn/Cd38/Parp14/Apoa4/Slc25a32/Nt5e/Hsp90aa1/Lrat/Vnn1/Mccc2/Gpc1/Aldh1l1/Slc19a2/Ttpa",23
+"R-MMU-8979227","Triglyceride metabolism","7/484","23/8772",0.000168521137191358,0.0108760949310423,0.0103978223918879,"Fabp5/Fabp2/Mogat1/Lpin1/Lpin2/Pnpla5/Gpam",7
+"R-MMU-1483191","Synthesis of PC","7/484","24/8772",0.00022671898214467,0.0135869447156699,0.0129894634882886,"Chpt1/Slc44a2/Lpin1/Abhd3/Lpin2/Pcyt1a/Chka",7
+"R-MMU-75105","Fatty acyl-CoA biosynthesis","8/484","33/8772",0.000330505430359498,0.0184862704047746,0.0176733430129079,"Acsl4/Acsl1/Hsd17b12/Acly/Elovl2/Fasn/Hacd3/Elovl1",8
+"R-MMU-166663","Initial triggering of complement","6/484","20/8772",0.000545664642687553,0.0286132897009286,0.0273550301136787,"Cfd/C2/C1qa/C1qc/Cfp/C1qb",6
+"R-MMU-8964043","Plasma lipoprotein clearance","7/484","28/8772",0.000639898663053254,0.0315808810765694,0.0301921226778068,"Pcsk9/Soat1/Apob/Lipa/Hdlbp/Ldlr/Nceh1",7
+"R-MMU-977068","Termination of O-glycan biosynthesis","5/484","15/8772",0.00094758366724427,0.0422085106773612,0.0403524059170055,"St3gal1/St3gal2/St6gal1/St6galnac3/St3gal4",5
+"R-MMU-75876","Synthesis of very long-chain fatty acyl-CoAs","6/484","22/8772",0.000955854234648228,0.0422085106773612,0.0403524059170055,"Acsl4/Acsl1/Hsd17b12/Elovl2/Hacd3/Elovl1",6

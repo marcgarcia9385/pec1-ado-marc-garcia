@@ -1,0 +1,6 @@
+"ID","Description","GeneRatio","BgRatio","pvalue","p.adjust","qvalue","geneID","Count"
+"R-MMU-191273","Cholesterol biosynthesis","8/224","25/8772",1.18695555957096e-07,7.92886313793401e-05,7.7214582717353e-05,"Hsd17b7/Mvd/Sc5d/Pmvk/Lss/Hmgcr/Fdps/Hmgcs1",8
+"R-MMU-8957322","Metabolism of steroids","14/224","125/8772",3.32644745216697e-06,0.00111103344902377,0.00108197080286273,"Srd5a1/Hsd17b7/Mvd/Sc5d/Cyp17a1/Pmvk/Lss/Scap/Hmgcr/Hsd17b12/Fdps/Stard4/Ube2i/Hmgcs1",14
+"R-MMU-8979227","Triglyceride metabolism","6/224","23/8772",1.8188625405758e-05,0.00405000059034879,0.00394405982482753,"Lpin2/Gpam/Pnpla5/Fabp2/Fabp4/Fabp5",6
+"R-MMU-163560","Triglyceride catabolism","4/224","11/8772",0.000118635271702654,0.0198120903743432,0.0192938415558526,"Pnpla5/Fabp2/Fabp4/Fabp5",4
+"R-MMU-75105","Fatty acyl-CoA biosynthesis","6/224","33/8772",0.000161163389469441,0.0215314288331174,0.02096820519834,"Acly/Acsl3/Hsd17b12/Elovl2/Scd2/Acsl5",6

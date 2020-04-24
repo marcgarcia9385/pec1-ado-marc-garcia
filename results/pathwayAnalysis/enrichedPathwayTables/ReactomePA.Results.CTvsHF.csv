@@ -1,0 +1,4 @@
+"ID","Description","GeneRatio","BgRatio","pvalue","p.adjust","qvalue","geneID","Count"
+"R-MMU-8978868","Fatty acid metabolism","26/423","169/8772",1.24639262550472e-07,0.000104198423492194,0.000101810597620175,"Cyp4a14/Aldh3a2/Cyp4a31/Ehhadh/Acaa2/Scp2/Cpt1a/Acacb/Acadm/Acot3/Slc22a5/Acsl1/Scd1/Acot1/Cyp1a1/Hacd3/Eci2/Acsl4/Hsd17b12/Ppard/Acot4/Acot2/Cyp4f15/Acaca/Acly/Cyp4f14",26
+"R-MMU-9613829","Chaperone Mediated Autophagy","7/423","22/8772",5.23347048965516e-05,0.0218759066467586,0.0213745952630126,"Plin2/Hsp90aa1/Ubc/Plin3/Vim/Hsp90ab1/Hspa8",7
+"R-MMU-191273","Cholesterol biosynthesis","7/423","25/8772",0.000130056787632533,0.0362424914869324,0.0354119534045071,"Msmo1/Hsd17b7/Fdft1/Dhcr24/Nsdhl/Ebp/Hmgcs1",7
